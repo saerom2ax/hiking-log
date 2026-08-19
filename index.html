@@ -122,6 +122,12 @@ p{margin:0}
 .strip-thumb{flex:none;border:0;padding:0;background:none;cursor:pointer;line-height:0}
 .strip-thumb img{width:54px;height:54px;object-fit:cover;border:1px solid var(--line)}
 .strip-thumb:hover img{border-color:var(--ribbon)}
+.vwith{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;color:var(--forest);
+  background:var(--paper);border:1px solid var(--line);padding:3px 9px;border-radius:999px;cursor:pointer}
+.vwith:hover{border-color:var(--forest)}
+.vnote{margin-top:8px;font-size:12px;color:var(--soft);line-height:1.7;white-space:pre-wrap;
+  border-left:2px solid var(--line);padding-left:10px;cursor:pointer}
+.vnote:hover{border-left-color:var(--ribbon);color:var(--ink)}
 
 .tabs{display:flex;gap:18px;border-bottom:1px solid var(--line)}
 .tabs button{border:0;background:none;padding:8px 0;font-size:13px;font-weight:600;color:var(--soft);
@@ -896,11 +902,14 @@ function render(){
       if(ph.length){
         strip='<div class="strip">'+ph.map((pid,i)=>'<button class="strip-thumb" data-photo-visit="'+v.id+'" data-i="'+i+'"><img src="'+(S.thumbs[pid]||"")+'" alt=""></button>').join("")+'</div>';
       }
+      let meta="";
+      if(v.buddy) meta+='<div class="vwith" data-edit="'+v.id+'">함께 '+esc(v.buddy)+'</div>';
+      if(v.note) meta+='<p class="vnote" data-edit="'+v.id+'">'+esc(v.note)+'</p>';
       vs+='<li><div class="visit-line" data-edit="'+v.id+'">'
         +'<span class="vdate num">'+fmtDate(v.date)+'</span>'
         +'<span class="vcourse">'+esc(v.course||"코스 미기록")+'</span>'
         +(v.hours?'<span class="vtag num">'+esc(v.hours)+'</span>':"")
-        +'</div>'+strip+'</li>';
+        +'</div>'+strip+meta+'</li>';
     });
     dh.innerHTML='<div class="detail"><div class="detail-head"><div>'
       +'<h3>'+esc(sel.name)+'</h3>'
