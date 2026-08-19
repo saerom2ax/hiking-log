@@ -52,6 +52,16 @@ p{margin:0}
 .set-item h3{font-size:14px;font-weight:700;margin-bottom:3px}
 .set-item p{font-size:12px;color:var(--soft);line-height:1.6}
 .set-item .btn{flex:none}
+.guide{border-top:1px dashed var(--line);padding-top:16px}
+.guide h3{font-size:11px;font-weight:600;color:var(--soft);letter-spacing:.05em;margin-bottom:12px}
+.guide ol{margin:0;padding:0;list-style:none;counter-reset:g}
+.guide li{counter-increment:g;padding:0 0 14px 26px;position:relative}
+.guide li:last-child{padding-bottom:0}
+.guide li::before{content:counter(g);position:absolute;left:0;top:1px;width:17px;height:17px;
+  border:1px solid var(--line);border-radius:999px;display:grid;place-items:center;
+  font-size:10px;font-weight:600;color:var(--forest);font-variant-numeric:tabular-nums}
+.guide li b{display:block;font-size:13px;font-weight:700;letter-spacing:-.02em;margin-bottom:3px}
+.guide li p{font-size:12px;color:var(--soft);line-height:1.7}
 
 .btn{font-size:13px;font-weight:600;padding:9px 16px;border-radius:2px;border:1px solid var(--ink);
   background:none;color:var(--ink);cursor:pointer;transition:.15s}
@@ -1113,6 +1123,13 @@ function openSettings(){
   const note = storeMode==="idb"
     ? "기록은 이 브라우저 안에 저장됩니다. 새로고침하거나 껐다 켜도 남지만, 다른 기기에서는 보이지 않습니다."
     : "이 브라우저에서는 저장 공간이 작습니다(사진 40장 내외). 사진을 많이 넣으려면 웹에 올려 쓰거나 파이어폭스로 열어 보세요.";
+  const guide=[
+    ["기록은 이 기기에만 저장됩니다","서버로 올라가지 않고 지금 쓰는 브라우저 안에만 쌓입니다. 남에게 보이지 않지만, 폰과 노트북도 서로 따로 놉니다. 한쪽에서 적은 기록이 다른 쪽에 나타나지 않습니다."],
+    ["백업은 꼭 해두세요","브라우저에서 사이트 데이터를 지우면 기록도 함께 사라집니다. 시크릿 창에서 쓰면 창을 닫는 순간 없어집니다. 위의 백업으로 사진까지 파일 하나로 내려받아 두고, 기기를 옮길 때도 그 파일로 복원하세요."],
+    ["목록에 없는 산도 넣을 수 있습니다","207곳이 들어 있습니다. 없는 산은 이름을 적고 지역만 고르면 지도에 표시됩니다."],
+    ["지도 보는 법","동그라미가 겹칠수록 여러 번 오른 산입니다. 두 손가락으로 확대·축소되고, 확대한 뒤에는 손가락으로 끌어 옮길 수 있습니다."],
+    ["정상까지 안 갔다면","오른 봉우리를 적어두면 누적 고도가 실제 오른 높이로 계산됩니다. 비워두면 그 산 정상까지 간 것으로 칩니다."]
+  ];
   document.getElementById("settingsHost").innerHTML=
    '<div class="scrim" data-act="scrim-close-set"><div class="sheet" data-stop="1">'
   +'<div class="sheet-head"><h2>설정</h2><button class="icon-btn" data-act="close-settings">✕</button></div>'
@@ -1122,6 +1139,9 @@ function openSettings(){
   +'<div class="set-item"><div><h3>복원</h3><p>백업 파일을 불러옵니다. <b>지금 기록은 모두 덮어씁니다.</b></p></div>'
   +'<button class="btn ghost" id="btnRestore">불러오기</button></div>'
   +'<p class="storage-note">'+note+'<br>지금 산행 '+S.hikes.length+'건, 사진 '+pics+'장이 저장되어 있습니다.</p>'
+  +'<div class="guide"><h3>사용 안내</h3><ol>'
+  + guide.map(g=>'<li><b>'+esc(g[0])+'</b><p>'+esc(g[1])+'</p></li>').join("")
+  +'</ol></div>'
   +'</div>'
   +'<div class="sheet-foot"><span></span><div class="foot-right">'
   +'<button class="btn solid" data-act="close-settings">닫기</button></div></div>'
