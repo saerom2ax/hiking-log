@@ -122,6 +122,8 @@ p{margin:0}
 .strip-thumb{flex:none;border:0;padding:0;background:none;cursor:pointer;line-height:0}
 .strip-thumb img{width:54px;height:54px;object-fit:cover;border:1px solid var(--line)}
 .strip-thumb:hover img{border-color:var(--ribbon)}
+.vpeak{margin-top:6px;font-size:11px;font-weight:600;color:var(--forest);cursor:pointer;letter-spacing:-.01em}
+.vpeak:hover{color:var(--ribbon)}
 .vwith{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;color:var(--forest);
   background:var(--paper);border:1px solid var(--line);padding:3px 9px;border-radius:999px;cursor:pointer}
 .vwith:hover{border-color:var(--forest)}
@@ -205,7 +207,9 @@ p{margin:0}
 .photo-add:hover{border-color:var(--forest)}
 .err{font-size:11px;color:var(--ribbon);display:flex;flex-direction:column;gap:2px}
 
-.viewer{position:fixed;inset:0;background:rgba(16,22,18,.93);z-index:40;display:grid;place-items:center;padding:24px}
+.viewer{position:fixed;inset:0;background:rgba(16,22,18,.93);z-index:40;display:grid;place-items:center;
+  padding:24px;touch-action:pan-y;user-select:none}
+.viewer-fig img{-webkit-user-drag:none;user-select:none}
 .viewer-fig{margin:0;max-width:min(1000px,92vw);display:flex;flex-direction:column;gap:12px}
 .viewer-fig img{max-width:100%;max-height:76vh;object-fit:contain;display:block;margin:0 auto}
 .viewer-load{color:#9AA79E;font-size:13px;padding:60px;text-align:center}
@@ -448,6 +452,40 @@ const REGIONS=[
 ["부산",35.180,129.075],["울산",35.540,129.310],["제주",33.400,126.550]
 ];
 
+/* 주요 산의 봉우리 [이름, 고도] — 없으면 직접 입력 */
+const PEAKS={
+"북한산":[["백운대",837],["인수봉",811],["만경대",800],["문수봉",727],["노적봉",716],["보현봉",714],["대남문",663],["비봉",560],["향로봉",535],["족두리봉",370]],
+"도봉산":[["자운봉",740],["신선대",726],["선인봉",708],["오봉",660],["우이암",542]],
+"관악산":[["연주대",632],["팔봉능선",540],["삼성산",481]],
+"청계산":[["망경대",618],["매봉",583],["옥녀봉",375]],
+"수락산":[["주봉",638],["도솔봉",540]],
+"설악산":[["대청봉",1708],["중청봉",1664],["끝청",1610],["소청봉",1550],["봉정암",1244],["공룡능선",1200],["울산바위",873],["권금성",700],["비룡폭포",400]],
+"지리산":[["천왕봉",1915],["제석봉",1806],["반야봉",1732],["연하봉",1730],["장터목",1653],["세석평전",1560],["삼도봉",1550],["노고단",1507]],
+"한라산":[["백록담",1947],["윗세오름",1700],["영실기암",1600],["사라오름",1338]],
+"덕유산":[["향적봉",1614],["중봉",1594],["설천봉",1520],["삿갓봉",1410]],
+"소백산":[["비로봉",1439],["국망봉",1421],["연화봉",1383],["제2연화봉",1357]],
+"오대산":[["비로봉",1563],["상왕봉",1491],["동대산",1434],["두로봉",1422]],
+"치악산":[["비로봉",1288],["남대봉",1181],["향로봉",1043]],
+"무등산":[["천왕봉",1187],["서석대",1100],["입석대",1017],["중봉",915],["새인봉",490]],
+"계룡산":[["천황봉",845],["삼불봉",775],["관음봉",766],["연천봉",739]],
+"속리산":[["천왕봉",1058],["문장대",1054],["신선대",1026]],
+"팔공산":[["비로봉",1193],["동봉",1167],["서봉",1150],["갓바위",850]],
+"가야산":[["칠불봉",1433],["상왕봉",1430],["만물상",1000]],
+"월출산":[["천황봉",809],["구정봉",738],["사자봉",667]],
+"태백산":[["장군봉",1567],["천제단",1560],["문수봉",1517]],
+"월악산":[["영봉",1097],["중봉",1000],["하봉",960]],
+"용문산":[["가섭봉",1157],["장군봉",1065],["백운봉",940]],
+"내장산":[["신선봉",763],["까치봉",717],["장군봉",696]],
+"금정산":[["고당봉",802],["원효봉",687],["의상봉",640]],
+"북한산성":[],
+"소요산":[["의상대",587],["나한대",571],["공주봉",526]]
+};
+function peakList(name){ return PEAKS[name]||[]; }
+function peakElevOf(mtn,peak){
+  const p=peakList(mtn).find(x=>x[0]===(peak||"").trim());
+  return p?p[1]:null;
+}
+
 const COAST=[
 [37.90,126.66],[37.70,126.38],[37.45,126.60],[37.20,126.55],[36.95,126.35],[36.75,126.13],
 [36.60,126.37],[36.30,126.50],[36.00,126.68],[35.80,126.58],[35.65,126.78],[35.40,126.45],
@@ -674,6 +712,19 @@ function summitList(){
   return [...g.values()].sort((a,b)=>b.count-a.count||b.elev-a.elev);
 }
 function timeline(){ return S.hikes.slice().sort((a,b)=>b.date.localeCompare(a.date)); }
+
+/* 그날 실제로 오른 높이: 봉우리 고도가 있으면 그것, 없으면 산 정상 고도 */
+function effElev(h,M){
+  if(h.peakElev>0) return h.peakElev;
+  const m=(M||allMountains()).get(h.name);
+  return (m&&m.elev)||0;
+}
+function peakLabel(h){
+  if(h.peak&&h.peakElev>0) return h.peak+" "+nf(h.peakElev)+"m";
+  if(h.peak) return h.peak;
+  if(h.peakElev>0) return nf(h.peakElev)+"m";
+  return "";
+}
 function photoItems(){
   const out=[];
   timeline().forEach(h=>(h.photos||[]).forEach(pid=>out.push({pid:pid,name:h.name,date:h.date,course:h.course})));
@@ -865,9 +916,13 @@ function render(){
   const summits=summitList(), tl=timeline(), pics=photoItems();
   const M=allMountains();
   const year=String(new Date().getFullYear());
-  const gain=S.hikes.reduce((s,h)=>s+((M.get(h.name)||{}).elev||0),0);
+  const gain=S.hikes.reduce((s,h)=>s+effElev(h,M),0);
   const thisYear=S.hikes.filter(h=>h.date.indexOf(year)===0).length;
-  const highest=summits.slice().sort((a,b)=>b.elev-a.elev)[0];
+  let top=null;
+  S.hikes.forEach(h=>{
+    const e=effElev(h,M);
+    if(e>0&&(!top||e>top.e)) top={e:e,name:h.name,peak:h.peak};
+  });
 
   document.getElementById("headSub").textContent =
     "산 "+summits.length+" · 산행 "+S.hikes.length+" · 누적 "+nf(gain)+"m"+(pics.length?" · 사진 "+pics.length+"장":"");
@@ -885,10 +940,11 @@ function render(){
      '<div><b class="num">'+summits.length+'</b><span>다녀온 산</span></div>'
     +'<div><b class="num">'+S.hikes.length+'</b><span>총 산행</span></div>'
     +'<div><b class="num">'+thisYear+'</b><span>올해</span></div>'
-    +'<div><b class="num">'+nf(gain)+'</b><span>정상 고도 합계 m</span></div>';
+    +'<div><b class="num">'+nf(gain)+'</b><span>누적 고도 m</span></div>';
 
   const ev=document.getElementById("everest");
-  ev.textContent = gain>0 ? "에베레스트 "+(gain/8849).toFixed(1)+"회분"+(highest?" · 최고점 "+highest.name+" "+nf(highest.elev)+"m":"") : "";
+  ev.textContent = gain>0 ? "에베레스트 "+(gain/8849).toFixed(1)+"회분"
+    +(top?" · 최고점 "+top.name+(top.peak?" "+top.peak:"")+" "+nf(Math.round(top.e))+"m":"") : "";
   ev.hidden = gain<=0;
 
   // 상세
@@ -903,13 +959,16 @@ function render(){
         strip='<div class="strip">'+ph.map((pid,i)=>'<button class="strip-thumb" data-photo-visit="'+v.id+'" data-i="'+i+'"><img src="'+(S.thumbs[pid]||"")+'" alt=""></button>').join("")+'</div>';
       }
       let meta="";
-      if(v.buddy) meta+='<div class="vwith" data-edit="'+v.id+'">함께 '+esc(v.buddy)+'</div>';
+      if(v.buddy) meta+='<div class="vwith" data-edit="'+v.id+'">+ '+esc(v.buddy)+'</div>';
       if(v.note) meta+='<p class="vnote" data-edit="'+v.id+'">'+esc(v.note)+'</p>';
+      const pk=peakLabel(v);
       vs+='<li><div class="visit-line" data-edit="'+v.id+'">'
         +'<span class="vdate num">'+fmtDate(v.date)+'</span>'
         +'<span class="vcourse">'+esc(v.course||"코스 미기록")+'</span>'
         +(v.hours?'<span class="vtag num">'+esc(v.hours)+'</span>':"")
-        +'</div>'+strip+meta+'</li>';
+        +'</div>'
+        +(pk?'<div class="vpeak num" data-edit="'+v.id+'">▲ '+esc(pk)+'</div>':"")
+        +strip+meta+'</li>';
     });
     dh.innerHTML='<div class="detail"><div class="detail-head"><div>'
       +'<h3>'+esc(sel.name)+'</h3>'
@@ -971,7 +1030,24 @@ function renderGallery(pics){
 }
 
 /* ─── 사진 보기 ─── */
-let VIEW=null;
+let VIEW=null, VIEWDRAG=false, VIEWTOKEN=0;
+const PCACHE=new Map();
+
+async function getFull(pid){
+  if(PCACHE.has(pid)) return PCACHE.get(pid);
+  let src=null;
+  try{ src=await Store.get(K_PHOTO(pid)); }catch(e){}
+  if(!src) src=S.thumbs[pid]||null;
+  PCACHE.set(pid,src);
+  if(PCACHE.size>12) PCACHE.delete(PCACHE.keys().next().value);
+  return src;
+}
+function prefetchNeighbors(){
+  if(!VIEW) return;
+  [VIEW.index-1,VIEW.index+1].forEach(i=>{
+    if(i>=0&&i<VIEW.items.length) getFull(VIEW.items[i].pid);
+  });
+}
 function openViewer(items,index){
   VIEW={items:items,index:index};
   drawViewer();
@@ -980,22 +1056,56 @@ async function drawViewer(){
   const host=document.getElementById("viewerHost");
   if(!VIEW){ host.innerHTML=""; return; }
   const it=VIEW.items[VIEW.index];
+  const cached=PCACHE.get(it.pid)||null;
+  const token=++VIEWTOKEN;
   host.innerHTML='<div class="viewer" data-act="close-viewer">'
     +'<button class="viewer-close" data-act="close-viewer">✕</button>'
-    +(VIEW.index>0?'<button class="viewer-nav left" data-nav="-1">‹</button>':"")
-    +(VIEW.index<VIEW.items.length-1?'<button class="viewer-nav right" data-nav="1">›</button>':"")
-    +'<figure class="viewer-fig" data-stop="1"><div class="viewer-load">사진 불러오는 중</div>'
+    +(VIEW.index>0?'<button class="viewer-nav left" data-nav="-1" aria-label="이전 사진">‹</button>':"")
+    +(VIEW.index<VIEW.items.length-1?'<button class="viewer-nav right" data-nav="1" aria-label="다음 사진">›</button>':"")
+    +'<figure class="viewer-fig" data-stop="1">'
+    +(cached?'<img src="'+cached+'" alt="">':'<div class="viewer-load">사진 불러오는 중</div>')
     +'<figcaption><b>'+esc(it.name)+'</b><span class="num">'+fmtDate(it.date)+'</span>'
     +(it.course?'<em>'+esc(it.course)+'</em>':"")
     +'<span class="num idx">'+(VIEW.index+1)+' / '+VIEW.items.length+'</span></figcaption></figure></div>';
-  let src=null;
-  try{ src=await Store.get(K_PHOTO(it.pid)); }catch(e){}
-  if(!src) src=S.thumbs[it.pid]||null;
-  if(!VIEW) return;
-  const fig=host.querySelector(".viewer-fig");
-  if(fig && src){ fig.querySelector(".viewer-load").outerHTML='<img src="'+src+'" alt="">'; }
+  if(!cached){
+    const src=await getFull(it.pid);
+    if(token!==VIEWTOKEN||!VIEW) return;
+    const load=host.querySelector(".viewer-load");
+    if(load&&src) load.outerHTML='<img src="'+src+'" alt="">';
+  }
+  prefetchNeighbors();
 }
 function closeViewer(){ VIEW=null; document.getElementById("viewerHost").innerHTML=""; }
+function stepViewer(dir){
+  if(!VIEW) return;
+  const ni=VIEW.index+dir;
+  if(ni<0||ni>=VIEW.items.length) return;
+  VIEW.index=ni; drawViewer();
+}
+function bindViewerSwipe(){
+  const host=document.getElementById("viewerHost");
+  let sx=null, sy=null, pid=null;
+  host.addEventListener("pointerdown",e=>{
+    if(!VIEW) return;
+    sx=e.clientX; sy=e.clientY; pid=e.pointerId; VIEWDRAG=false;
+  });
+  host.addEventListener("pointermove",e=>{
+    if(sx==null||e.pointerId!==pid) return;
+    if(Math.abs(e.clientX-sx)>12) VIEWDRAG=true;
+  });
+  const finish=e=>{
+    if(sx==null||e.pointerId!==pid) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    sx=null; pid=null;
+    if(!VIEW) return;
+    if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.2){
+      VIEWDRAG=true;
+      stepViewer(dx<0?1:-1);
+    }
+  };
+  host.addEventListener("pointerup",finish);
+  host.addEventListener("pointercancel",()=>{ sx=null; pid=null; });
+}
 
 /* ─── 설정 ─── */
 function openSettings(){
@@ -1021,7 +1131,7 @@ function closeSettings(){ document.getElementById("settingsHost").innerHTML=""; 
 
 /* ─── 기록 입력 ─── */
 let D=null; // draft
-function blankDraft(){ return {id:null,name:"",course:"",date:todayStr(),hours:"",buddy:"",note:"",lat:null,lng:null,elev:"",region:"",photos:[],newPhotos:[],fine:false}; }
+function blankDraft(){ return {id:null,name:"",course:"",date:todayStr(),hours:"",buddy:"",note:"",peak:"",peakElev:"",lat:null,lng:null,elev:"",region:"",photos:[],newPhotos:[],fine:false}; }
 
 function openForm(pre){
   D=Object.assign(blankDraft(),pre||{});
@@ -1044,6 +1154,11 @@ function openForm(pre){
   +'<div id="fMap"></div></div>'
   +'<label class="fld"><span>코스</span><input id="fCourse" list="courseHints" placeholder="예: 우이동 → 백운대 → 도선사" value="'+esc(D.course)+'">'
   +'<datalist id="courseHints">'+courses.map(c=>'<option value="'+esc(c)+'"></option>').join("")+'</datalist></label>'
+  +'<div class="row2"><label class="fld"><span>오른 봉우리</span>'
+  +'<input id="fPeak" list="peakHints" placeholder="선택" value="'+esc(D.peak||"")+'">'
+  +'<datalist id="peakHints"></datalist></label>'
+  +'<label class="fld"><span>오른 높이 (m)</span>'
+  +'<input type="number" id="fPeakElev" placeholder="" value="'+esc(D.peakElev||"")+'"></label></div>'
   +'<div class="row2"><label class="fld"><span>날짜</span><input type="date" id="fDate" value="'+esc(D.date)+'"></label>'
   +'<label class="fld"><span>소요 시간</span><input id="fHours" placeholder="예: 5시간 20분" value="'+esc(D.hours)+'"></label></div>'
   +'<p class="hint" id="fDateHint" hidden></p>'
@@ -1125,6 +1240,13 @@ function wireForm(){
   grid.addEventListener("drop",e=>{ e.preventDefault(); addFiles(e.dataTransfer.files); });
   file.addEventListener("change",e=>{ addFiles(e.target.files); e.target.value=""; });
 
+  document.getElementById("fPeak").addEventListener("input",e=>{
+    const name=document.getElementById("fName").value.trim();
+    const el=peakElevOf(name,e.target.value);
+    const box=document.getElementById("fPeakElev");
+    if(el&&(!box.value||box.dataset.auto==="1")){ box.value=el; box.dataset.auto="1"; }
+  });
+  document.getElementById("fPeakElev").addEventListener("input",e=>{ e.target.dataset.auto=""; });
   document.getElementById("fSave").addEventListener("click",saveDraft);
   document.getElementById("fDate").addEventListener("input",()=>{
     D.dateTouched=true;
@@ -1157,6 +1279,17 @@ function refreshName(){
   }
   const ok=D.name.trim()&&document.getElementById("fDate").value&&(known||(D.lat&&D.lng));
   document.getElementById("fSave").disabled=!ok;
+
+  const dl=document.getElementById("peakHints");
+  if(dl){
+    const list=peakList(D.name.trim());
+    dl.innerHTML=list.map(p=>'<option value="'+esc(p[0])+'">'+nf(p[1])+'m</option>').join("");
+    const pe=document.getElementById("fPeakElev");
+    const summit=known&&known.elev?known.elev:null;
+    pe.placeholder = summit?("정상 "+nf(summit)):"";
+    const pk=document.getElementById("fPeak");
+    pk.placeholder = list.length?("선택 (예: "+list[0][0]+")"):"선택";
+  }
 }
 
 function drawPhotos(){
@@ -1234,7 +1367,10 @@ async function saveDraft(){
 
   const rec={id:D.id||uid(),name:name,course:document.getElementById("fCourse").value.trim(),date:date,
     hours:document.getElementById("fHours").value.trim(),buddy:document.getElementById("fBuddy").value.trim(),
-    note:document.getElementById("fNote").value.trim(),photos:photoIds};
+    note:document.getElementById("fNote").value.trim(),
+    peak:document.getElementById("fPeak").value.trim(),
+    peakElev:Number(document.getElementById("fPeakElev").value)||null,
+    photos:photoIds};
   if(D.id) S.hikes=S.hikes.map(h=>h.id===D.id?rec:h); else S.hikes.push(rec);
   S.selected=name;
   await saveData();
@@ -1353,11 +1489,11 @@ document.addEventListener("click",e=>{
   if(pa){ openViewer(photoItems(),Number(pa.dataset.photoAll)||0); return; }
 
   const nav=t.closest("[data-nav]");
-  if(nav&&VIEW){
-    VIEW.index=Math.max(0,Math.min(VIEW.items.length-1,VIEW.index+Number(nav.dataset.nav)));
-    drawViewer(); return;
+  if(nav&&VIEW){ stepViewer(Number(nav.dataset.nav)); return; }
+  if(t.closest('[data-act="close-viewer"]')&&!t.closest("[data-stop]")){
+    if(VIEWDRAG){ VIEWDRAG=false; return; }
+    closeViewer(); return;
   }
-  if(t.closest('[data-act="close-viewer"]')&&!t.closest("[data-stop]")){ closeViewer(); return; }
   if(t.closest('[data-act="delete"]')){ deleteDraft(); return; }
   if(t.closest('[data-act="close-form"]')){ closeForm(); return; }
   if(t.closest('[data-act="scrim-close"]')&&!t.closest("[data-stop]")){ closeForm(); return; }
@@ -1372,8 +1508,8 @@ document.addEventListener("click",e=>{
 document.addEventListener("keydown",e=>{
   if(VIEW){
     if(e.key==="Escape") closeViewer();
-    if(e.key==="ArrowRight"&&VIEW.index<VIEW.items.length-1){ VIEW.index++; drawViewer(); }
-    if(e.key==="ArrowLeft"&&VIEW.index>0){ VIEW.index--; drawViewer(); }
+    if(e.key==="ArrowRight") stepViewer(1);
+    if(e.key==="ArrowLeft") stepViewer(-1);
     return;
   }
   if(D&&e.key==="Escape") closeForm();
@@ -1391,6 +1527,7 @@ document.addEventListener("change",e=>{
 (async function init(){
   await openDB();
   bindMapZoom();
+  bindViewerSwipe();
   try{ const raw=await Store.get(K_DATA); if(raw){ const v=JSON.parse(raw); S.hikes=v.hikes||[]; S.customs=v.customs||[]; } }catch(e){}
   try{ const t=await Store.get(K_THUMBS); if(t) S.thumbs=JSON.parse(t)||{}; }catch(e){}
   render();
