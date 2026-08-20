@@ -85,6 +85,16 @@ p{margin:0}
 .map-svg.zoomable{touch-action:pan-y;cursor:grab}
 .map-svg.zoomable:active{cursor:grabbing}
 
+/* 권역 전환 */
+.regions{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 12px;
+  scrollbar-width:none;-ms-overflow-style:none}
+.regions::-webkit-scrollbar{display:none}
+.regions button{flex:none;border:1px solid var(--line);background:var(--surface);
+  color:var(--soft);font-size:13px;font-weight:600;padding:7px 14px;border-radius:6px;
+  cursor:pointer;transition:.15s;letter-spacing:-.02em}
+.regions button:hover{color:var(--ink);border-color:var(--faint)}
+.regions button.on{background:var(--green-soft);border-color:var(--green-soft);color:var(--green)}
+
 /* 지도 */
 .land{fill:var(--land);stroke:none}
 .marker{cursor:pointer}
@@ -337,6 +347,7 @@ p{margin:0}
 
 <main class="grid" id="pageMap">
   <section class="map-panel">
+    <div class="regions" id="regionBar"></div>
     <div id="mapHost"></div>
     <p class="legend">
       <span class="legend-swatch" aria-hidden="true">
@@ -764,7 +775,7 @@ const MOUNTAIN_ART='<svg class="feature-art" viewBox="0 0 190 96" aria-hidden="t
  +'</svg>';
 
 /* ─── 상태 ─── */
-const S={hikes:[],customs:[],thumbs:{},selected:null,view:"map",tab:"summits",draft:null,viewer:null};
+const S={hikes:[],customs:[],thumbs:{},selected:null,view:"map",region:1,tab:"summits",draft:null,viewer:null};
 
 function allMountains(){
   const m=new Map();
@@ -825,14 +836,8 @@ function toast(msg){
 /* ─── 지도 ─── */
 function mapSVG(opts){
   const summits=opts.summits||[], selected=opts.selected, pick=!!opts.pick, pin=opts.pin, compact=!!opts.compact;
-  const shown=new Set();
-  if(!compact){
-    summits.slice().sort((a,b)=>b.count-a.count).slice(0,3).forEach(s=>shown.add(s.name));
-    if(selected) shown.add(selected);
-  }
-
   let mk="";
-  summits.forEach(s=>{
+  summits.forEach((s,idx)=>{
     const p=proj(s.lat,s.lng), rings=Math.min(s.count,5);
     const outer=5+(rings-1)*3.6;
     let rc="";
@@ -840,12 +845,12 @@ function mapSVG(opts){
     const el=s.elev?nf(s.elev)+"m":"";
     const w=Math.max(58,s.name.length*13+24), h=el?38:24;
     const ly=-(outer+9);
-    const label='<g class="mlabel-g" transform="translate(0,'+ly+')">'
+    const label='<g class="mlabel-g" data-w="'+w+'" data-h="'+h+'" data-ly="'+ly+'" transform="translate(0,'+ly+')">'
       +'<rect class="mlabel-bg" x="'+(-w/2)+'" y="'+(-h)+'" width="'+w+'" height="'+h+'" rx="4"></rect>'
       +'<text class="mlabel-name" y="'+(-h+(el?15:16))+'" text-anchor="middle">'+esc(s.name)+'</text>'
       +(el?'<text class="mlabel-elev" y="'+(-h+29)+'" text-anchor="middle">'+el+'</text>':"")
       +'</g>';
-    mk+='<g class="marker'+(selected===s.name?" active":"")+(shown.has(s.name)?" shown":"")+'" data-mtn="'+esc(s.name)+'">'
+    mk+='<g class="marker'+(selected===s.name?" active":"")+'" data-mtn="'+esc(s.name)+'" data-pri="'+(selected===s.name?0:idx+1)+'">'
       +'<g class="mglyph" data-x="'+p.x+'" data-y="'+p.y+'" transform="translate('+p.x+','+p.y+')">'
       +'<circle r="20" fill="transparent"></circle>'+rc
       +'<circle r="3.6" class="dot"></circle>'
@@ -896,6 +901,70 @@ function applyMZ(){
   });
   const r=document.getElementById("mzReset");
   if(r) r.hidden = MZ.k<=1.001;
+  layoutLabels();
+}
+
+/* 겹치지 않는 라벨만 골라 보여준다 */
+function layoutLabels(){
+  const host=document.getElementById("mapZoomG");
+  if(!host) return;
+  const items=[];
+  host.querySelectorAll(".marker").forEach(m=>{
+    const gl=m.querySelector(".mglyph"), lb=m.querySelector(".mlabel-g");
+    if(!gl||!lb) return;
+    const X=MZ.tx+MZ.k*(+gl.dataset.x), Y=MZ.ty+MZ.k*(+gl.dataset.y);
+    const w=+lb.dataset.w, h=+lb.dataset.h, ly=+lb.dataset.ly;
+    items.push({m:m,X:X,Y:Y,pri:+(m.dataset.pri||99),
+      box:{x:X-w/2,y:Y+ly-h,w:w,h:h}});
+  });
+  items.sort((a,b)=>a.pri-b.pri);
+  const placed=[], pad=3;
+  items.forEach(it=>{
+    const b=it.box;
+    let ok = it.X>-10 && it.X<VW+10 && it.Y>-10 && it.Y<VH+10
+          && b.y>2 && b.x>-6 && b.x+b.w<VW+6 && placed.length<16;
+    if(ok){
+      for(let i=0;i<placed.length;i++){
+        const p=placed[i];
+        if(!(b.x+b.w+pad<p.x || p.x+p.w+pad<b.x || b.y+b.h+pad<p.y || p.y+p.h+pad<b.y)){ ok=false; break; }
+      }
+    }
+    it.m.classList.toggle("shown",ok);
+    if(ok) placed.push(b);
+  });
+}
+
+/* 권역 보기 [이름, 위도최소, 위도최대, 경도최소, 경도최대] */
+const REGION_VIEWS=[
+  ["전국",null],
+  ["수도권",[36.85,38.30,126.15,127.95]],
+  ["강원",[36.90,38.60,127.45,129.60]],
+  ["충청",[35.90,37.25,125.95,128.60]],
+  ["영남",[34.60,36.70,127.55,129.60]],
+  ["호남",[34.15,36.10,125.90,127.95]],
+  ["제주",[33.10,33.70,126.05,127.05]]
+];
+function renderRegions(){
+  const bar=document.getElementById("regionBar");
+  if(!bar) return;
+  bar.innerHTML=REGION_VIEWS.map((r,i)=>
+    '<button data-region="'+i+'"'+(i===S.region?' class="on"':'')+'>'+esc(r[0])+'</button>').join("");
+}
+function markRegion(i){
+  S.region=i;
+  document.querySelectorAll("#regionBar button").forEach(b=>{
+    b.classList.toggle("on", +b.dataset.region===i);
+  });
+}
+function gotoRegion(i){
+  const r=REGION_VIEWS[i][1];
+  if(!r){ MZ.k=1; MZ.tx=0; MZ.ty=0; applyMZ(); markRegion(0); return; }
+  const tl=proj(r[1],r[2]), br=proj(r[0],r[3]);
+  const w=br.x-tl.x, h=br.y-tl.y;
+  MZ.k=Math.max(1,Math.min(8,Math.min(VW/w,VH/h)));
+  MZ.tx=VW/2-MZ.k*(tl.x+w/2);
+  MZ.ty=VH/2-MZ.k*(tl.y+h/2);
+  clampMZ(); applyMZ(); markRegion(i);
 }
 function svgPoint(svg,cx,cy){
   const m=svg.getScreenCTM();
@@ -910,12 +979,12 @@ function zoomAt(svg,cx,cy,ratio){
   const r=MZ.k/k0;
   MZ.tx=u.x-r*(u.x-MZ.tx);
   MZ.ty=u.y-r*(u.y-MZ.ty);
-  clampMZ(); applyMZ();
+  clampMZ(); applyMZ(); markRegion(-1);
 }
 function panBy(svg,dx,dy){
   const a=svgPoint(svg,0,0), b=svgPoint(svg,dx,dy);
   MZ.tx+=b.x-a.x; MZ.ty+=b.y-a.y;
-  clampMZ(); applyMZ();
+  clampMZ(); applyMZ(); markRegion(-1);
 }
 function zoomCenter(ratio){
   const svg=document.querySelector("#mapHost svg.map-svg");
@@ -923,7 +992,7 @@ function zoomCenter(ratio){
   const r=svg.getBoundingClientRect();
   zoomAt(svg,r.left+r.width/2,r.top+r.height/2,ratio);
 }
-function resetMZ(){ MZ.k=1; MZ.tx=0; MZ.ty=0; applyMZ(); }
+function resetMZ(){ MZ.k=1; MZ.tx=0; MZ.ty=0; applyMZ(); markRegion(0); }
 
 function bindMapZoom(){
   const host=document.getElementById("mapHost");
@@ -1552,6 +1621,9 @@ document.addEventListener("click",e=>{
   const tab=t.closest("[data-tab]");
   if(tab){ S.tab=tab.dataset.tab; render(); return; }
 
+  const rg=t.closest("[data-region]");
+  if(rg){ gotoRegion(+rg.dataset.region); return; }
+
   const mz=t.closest("[data-mz]");
   if(mz){
     const a=mz.dataset.mz;
@@ -1634,9 +1706,11 @@ document.addEventListener("change",e=>{
   await openDB();
   bindMapZoom();
   bindViewerSwipe();
+  renderRegions();
   try{ const raw=await Store.get(K_DATA); if(raw){ const v=JSON.parse(raw); S.hikes=v.hikes||[]; S.customs=v.customs||[]; } }catch(e){}
   try{ const t=await Store.get(K_THUMBS); if(t) S.thumbs=JSON.parse(t)||{}; }catch(e){}
   render();
+  if(S.region>0) gotoRegion(S.region);
 })();
 </script>
 </body>
