@@ -110,6 +110,19 @@ p{margin:0}
   padding:0 4px}
 .legend-swatch{flex:none;line-height:0}
 
+/* 대표 산 카드 */
+.feature{position:relative;background:var(--surface);border-radius:var(--r);padding:16px 18px;
+  box-shadow:var(--sh);overflow:hidden;cursor:pointer;transition:.16s;min-height:84px}
+.feature:hover{box-shadow:var(--sh-md)}
+.feature-label{font-size:12px;font-weight:600;color:var(--soft);position:relative;z-index:1}
+.feature-main{margin-top:7px;display:flex;align-items:baseline;gap:9px;
+  flex-wrap:wrap;position:relative;z-index:1}
+.feature-main b{font-size:20px;font-weight:800;letter-spacing:-.045em}
+.feature-main span{font-size:13px;font-weight:600;color:var(--soft)}
+.feature-art{position:absolute;right:0;bottom:0;height:72%;width:auto;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 34%);
+  mask-image:linear-gradient(to right,transparent,#000 34%)}
+
 /* 사이드 */
 .side{display:flex;flex-direction:column;gap:12px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -339,6 +352,7 @@ p{margin:0}
   </section>
 
   <aside class="side">
+    <div id="featureHost"></div>
     <div class="stats" id="stats"></div>
     <p class="everest num" id="everest"></p>
     <div id="detailHost"></div>
@@ -739,6 +753,16 @@ function nearestMountain(lat,lng){
 }
 function fmtKm(km){ return km<1 ? Math.round(km*1000)+"m" : km.toFixed(1)+"km"; }
 
+/* 대표 산 카드에 들어가는 산 그림 */
+const MOUNTAIN_ART='<svg class="feature-art" viewBox="0 0 190 96" aria-hidden="true">'
+ +'<path d="M-6 96 L34 46 L76 96 Z" fill="#DCEAD8"/>'
+ +'<path d="M120 96 L152 54 L192 96 Z" fill="#CDE1CA"/>'
+ +'<path d="M40 96 L92 22 L146 96 Z" fill="#A9CBAE"/>'
+ +'<path d="M92 22 L120 62 L92 96 Z" fill="#8CB795"/>'
+ +'<path d="M92 22 L78 43 L86 47 L74 60 L92 60 Z" fill="#F2F7F1"/>'
+ +'<path d="M92 22 L104 40 L96 44 L106 56 L92 60 Z" fill="#EAF2E9"/>'
+ +'</svg>';
+
 /* ─── 상태 ─── */
 const S={hikes:[],customs:[],thumbs:{},selected:null,view:"map",tab:"summits",draft:null,viewer:null};
 
@@ -987,6 +1011,23 @@ function render(){
 
   document.getElementById("mapHost").innerHTML=mapSVG({summits:summits,selected:S.selected,zoom:true});
   applyMZ();
+
+  const fh=document.getElementById("featureHost");
+  if(summits.length){
+    const most=summits[0];
+    let label,m,meta;
+    if(most.count>1){
+      label="가장 많이 오른 산"; m=most;
+      meta=(m.elev?nf(m.elev)+"m · ":"")+m.count+"회";
+    }else{
+      m=summits.slice().sort((a,b)=>b.elev-a.elev)[0];
+      label="가장 높이 오른 산"; meta=m.elev?nf(m.elev)+"m":m.region;
+    }
+    fh.innerHTML='<div class="feature" data-select="'+esc(m.name)+'">'
+      +'<span class="feature-label">'+label+'</span>'
+      +'<p class="feature-main"><b>'+esc(m.name)+'</b><span class="num">'+meta+'</span></p>'
+      +MOUNTAIN_ART+'</div>';
+  } else fh.innerHTML="";
 
   document.getElementById("stats").innerHTML=
      '<div><b class="num">'+summits.length+'</b><span>다녀온 산</span></div>'
